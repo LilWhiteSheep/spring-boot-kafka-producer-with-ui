@@ -12,7 +12,23 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+import java.time.*;
+import java.util.Random;
+
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.Schema;
+import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.io.DatumWriter;
+import org.apache.avro.generic.GenericDatumWriter;
+import org.apache.commons.io.IOUtils;
 
 @RestController
 @RequestMapping("kafka")
@@ -36,6 +52,7 @@ public class UserResource
 //    private static final String TOPIC = "Kafka_Example_json";
 
     private static final String TOPIC = "Kafka_Example_file";
+    private static final String M_TOPIC = "MessageQueue";
 
     //    @GetMapping("/publish/{message}")
 //    public String post(@PathVariable("message") final String message)
@@ -58,10 +75,42 @@ public class UserResource
         byte[] byteChunk = null;
 
         File file = new File("D:\\NtustMaster\\First\\Project\\CIMFORCE\\testFile\\test_6MB.pdf");
-        byte[] fileInByte = readFileToByte(file);
-        blockCount = (fileInByte.length / blockSize) + 1;
+        //byte[] fileInByte = readFileToByte(file);
+        //blockCount = (fileInByte.length / blockSize) + 1;
+
+        //Avro Start Here
+        File avsc = new File("message.avsc");
+        try{
+            Schema schema = new Schema.Parser().parse(avsc);
+            GenericRecord message1 = new GenericData.Record(schema);
+            message1.put("name", file.getName());
+            LocalDateTime currentTime = LocalDateTime.now();
+            message1.put("time", currentTime.toString());
+            message1.put("size", Long.toString(file.length()));
+            Random rd = new Random();
+            message1.put("jobid", rd.nextInt(99998)+1);
+
+            //Create avro metadata file
+            File avroFile = new File("messages.avro");
+            DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<GenericRecord>(schema);
+            DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<GenericRecord>(datumWriter);
+            dataFileWriter.create(schema, avroFile);
+            dataFileWriter.append(message1);
+            dataFileWriter.close();
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+
+        //Throw all files to zip and return byte[]
+        ArrayList<File> files = new ArrayList<>(2);
+        files.add(file);
+        files.add(new File("messages.avro"));
+        //Avro End here & zip all files together
 
         try {
+            byte[] fileInByte = ZipFilesToByte(files);
+            blockCount = (fileInByte.length / blockSize) + 1;
+
             for (int i = 0; i < blockCount - 1; i++) {
                 int pointer = i * blockSize;
                 byteChunk = Arrays.copyOfRange(fileInByte, pointer, pointer + blockSize);
@@ -82,7 +131,7 @@ public class UserResource
             kafkaTemplate.send(new ProducerRecord<>(TOPIC, messageNo, finalBytes));
         }
         //TestFileTransferEnd
-
+        
 
         //JsonVer
 //        kafkaTemplate.send(TOPIC, new User(name, "Tech"));
@@ -108,5 +157,33 @@ public class UserResource
 //            bytes[i] = String.valueOf(bytesArray[i]);
 //        }
         return bytesArray;
+    }
+
+    //ZIPPPPPPPPPPPPPPPPP
+    private byte[] ZipFilesToByte(ArrayList<File> files) throws IOException{
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(byteArrayOutputStream);
+        ZipOutputStream zipOutputStream = new ZipOutputStream(bufferedOutputStream);
+
+        for (File file : files) {
+            //new zip entry and copying inputstream with file to zipOutputStream, after all closing streams
+            zipOutputStream.putNextEntry(new ZipEntry(file.getName()));
+            FileInputStream fileInputStream = new FileInputStream(file);
+
+            IOUtils.copy(fileInputStream, zipOutputStream);
+
+            fileInputStream.close();
+            zipOutputStream.closeEntry();
+        }
+
+        if (zipOutputStream != null) {
+            zipOutputStream.finish();
+            zipOutputStream.flush();
+            zipOutputStream.close();
+        }
+        bufferedOutputStream.close();
+        byteArrayOutputStream.close();
+
+        return byteArrayOutputStream.toByteArray();
     }
 }
