@@ -1,0 +1,10 @@
+{
+ "type": "record",
+ "name": "Message",
+ "fields": [
+     {"name": "name", "type": "string"},
+     {"name": "time",  "type": ["string", "null"]},
+     {"name": "size", "type": ["string", "null"]},
+     {"name": "jobid", "type": ["int", "null"]}
+ ]
+}
