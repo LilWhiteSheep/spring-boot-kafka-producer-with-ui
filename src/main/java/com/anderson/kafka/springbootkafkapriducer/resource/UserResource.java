@@ -36,7 +36,7 @@ public class UserResource
 {
     private final byte[] finalBytes = {0x00, 0x11};
 
-//    @Autowired
+    //    @Autowired
 //    private KafkaTemplate<String, String> kafkaTemplate;
     //JsonVer
 //    @Autowired
@@ -80,7 +80,8 @@ public class UserResource
 
         //Avro Start Here
         File avsc = new File("message.avsc");
-        try{
+        try
+        {
             Schema schema = new Schema.Parser().parse(avsc);
             GenericRecord message1 = new GenericData.Record(schema);
             message1.put("name", file.getName());
@@ -88,7 +89,7 @@ public class UserResource
             message1.put("time", currentTime.toString());
             message1.put("size", Long.toString(file.length()));
             Random rd = new Random();
-            message1.put("jobid", rd.nextInt(99998)+1);
+            message1.put("jobid", rd.nextInt(99998) + 1);
 
             //Create avro metadata file
             File avroFile = new File("messages.avro");
@@ -97,7 +98,8 @@ public class UserResource
             dataFileWriter.create(schema, avroFile);
             dataFileWriter.append(message1);
             dataFileWriter.close();
-        } catch(Exception e) {
+        } catch (Exception e)
+        {
             e.printStackTrace();
         }
 
@@ -107,11 +109,13 @@ public class UserResource
         files.add(new File("messages.avro"));
         //Avro End here & zip all files together
 
-        try {
+        try
+        {
             byte[] fileInByte = ZipFilesToByte(files);
             blockCount = (fileInByte.length / blockSize) + 1;
 
-            for (int i = 0; i < blockCount - 1; i++) {
+            for (int i = 0; i < blockCount - 1; i++)
+            {
                 int pointer = i * blockSize;
                 byteChunk = Arrays.copyOfRange(fileInByte, pointer, pointer + blockSize);
                 kafkaTemplate.send(new ProducerRecord<>(TOPIC, messageNo, byteChunk));
@@ -125,13 +129,15 @@ public class UserResource
 
 
         } catch (
-                Exception e) {
+                Exception e)
+        {
             e.printStackTrace();
-        } finally {
+        } finally
+        {
             kafkaTemplate.send(new ProducerRecord<>(TOPIC, messageNo, finalBytes));
         }
         //TestFileTransferEnd
-        
+
 
         //JsonVer
 //        kafkaTemplate.send(TOPIC, new User(name, "Tech"));
@@ -140,15 +146,18 @@ public class UserResource
         return "Published successfully";
     }
 
-    private byte[] readFileToByte(File file) {
+    private byte[] readFileToByte(File file)
+    {
         FileInputStream fileInputStream = null;
 
         byte[] bytesArray = new byte[(int) file.length()];
-        try {
+        try
+        {
             fileInputStream = new FileInputStream(file);
             fileInputStream.read(bytesArray);
             fileInputStream.close();
-        } catch (IOException e) {
+        } catch (IOException e)
+        {
             e.printStackTrace();
         }
         //copy byte to String
@@ -160,12 +169,14 @@ public class UserResource
     }
 
     //ZIPPPPPPPPPPPPPPPPP
-    private byte[] ZipFilesToByte(ArrayList<File> files) throws IOException{
+    private byte[] ZipFilesToByte(ArrayList<File> files) throws IOException
+    {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(byteArrayOutputStream);
         ZipOutputStream zipOutputStream = new ZipOutputStream(bufferedOutputStream);
 
-        for (File file : files) {
+        for (File file : files)
+        {
             //new zip entry and copying inputstream with file to zipOutputStream, after all closing streams
             zipOutputStream.putNextEntry(new ZipEntry(file.getName()));
             FileInputStream fileInputStream = new FileInputStream(file);
@@ -176,7 +187,8 @@ public class UserResource
             zipOutputStream.closeEntry();
         }
 
-        if (zipOutputStream != null) {
+        if (zipOutputStream != null)
+        {
             zipOutputStream.finish();
             zipOutputStream.flush();
             zipOutputStream.close();
