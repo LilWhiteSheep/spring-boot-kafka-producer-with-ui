@@ -48,6 +48,8 @@ public class FileUploadController
     private final byte[] fileContentBytes = {0x00, 0x10};
     private final byte[] finalBytes = {0x00, 0x11};
 
+    static boolean uploadingFlag = false;
+
     @Autowired
     private KafkaTemplate<Integer, byte[]> kafkaTemplate;
 
@@ -79,6 +81,19 @@ public class FileUploadController
     public String handleFileUpload(@RequestParam("file") MultipartFile file,
                                    RedirectAttributes redirectAttributes)
     {
+        while(uploadingFlag)
+        {
+            System.out.println(uploadingFlag);
+            if(!uploadingFlag)
+            {
+                break;
+            }
+        }
+        if(!uploadingFlag)
+        {
+            uploadingFlag = true;
+        }
+
         //TestFileTransfer
         int messageNo = 1;
 
@@ -91,6 +106,7 @@ public class FileUploadController
 
         try
         {
+
 //            byte[] fileInByte = file.getBytes();
 //            blockCount = (fileInByte.length / blockSize) + 1;
 //
@@ -186,6 +202,7 @@ public class FileUploadController
         finally
         {
             kafkaTemplate.send(new ProducerRecord<>(TOPIC, messageNo, finalBytes));
+            uploadingFlag = false;
         }
 
 
@@ -218,7 +235,7 @@ public class FileUploadController
             zipOutputStream.putNextEntry(new ZipEntry(file.getName()));
             FileInputStream fileInputStream = new FileInputStream(file);
 
-            IOUtils.copy(fileInputStream, zipOutputStream);
+            IOUtils.copyLarge(fileInputStream, zipOutputStream);
 
             fileInputStream.close();
             zipOutputStream.closeEntry();
