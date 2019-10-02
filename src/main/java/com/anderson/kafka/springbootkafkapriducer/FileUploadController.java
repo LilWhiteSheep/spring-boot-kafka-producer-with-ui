@@ -177,7 +177,11 @@ public class FileUploadController
             kafkaTemplate.send(new ProducerRecord<>(TOPIC, messageNo, fileNameInBytes));
             messageNo++;
 //            InputStream inputStream = file.getInputStream();
-            InputStream inputStream = new ByteArrayInputStream(ZipFilesToByte(files));//how to transfer bytearray to
+            ZipFilesToByte(files);
+            File zipFile;
+            zipFile = new File("D:\\NtustMaster\\First\\Project\\CIMFORCE\\testFile\\temp\\" + "temp.zip");
+//            InputStream inputStream = new ByteArrayInputStream(ZipFilesToByte(files));//how to transfer bytearray to
+            InputStream inputStream = new FileInputStream(zipFile);
             // inputstream?
             while (inputStream.read(fileBuffer) != -1)
             {
@@ -190,6 +194,12 @@ public class FileUploadController
             if (tempFile.exists())
             {
                 tempFile.delete();
+            }
+
+            if (zipFile.exists())
+            {
+                inputStream.close();
+                zipFile.delete();
             }
         }
         catch (IOException e)
@@ -224,34 +234,57 @@ public class FileUploadController
         return "redirect:/";
     }
 
-    private byte[] ZipFilesToByte(ArrayList<File> files) throws IOException
+    private void ZipFilesToByte(ArrayList<File> files) throws IOException
     {
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(byteArrayOutputStream);
-        ZipOutputStream zipOutputStream = new ZipOutputStream(bufferedOutputStream);
+//        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+//        BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(byteArrayOutputStream);
+//        ZipOutputStream zipOutputStream = new ZipOutputStream(bufferedOutputStream);
+//
+//        for (File file : files)
+//        {
+//            //new zip entry and copying inputstream with file to zipOutputStream, after all closing streams
+//            zipOutputStream.putNextEntry(new ZipEntry(file.getName()));
+//            FileInputStream fileInputStream = new FileInputStream(file);
+//
+//            IOUtils.copyLarge(fileInputStream, zipOutputStream);
+//
+//            fileInputStream.close();
+//            zipOutputStream.closeEntry();
+//        }
+//
+//        if (zipOutputStream != null)
+//        {
+//            zipOutputStream.finish();
+//            zipOutputStream.flush();
+//            zipOutputStream.close();
+//        }
+//        bufferedOutputStream.close();
+//        byteArrayOutputStream.close();
+//
+//        return byteArrayOutputStream.toByteArray();
+        byte[] fileBuffer = new byte[2048];
+        File zipFile = new File("D:\\NtustMaster\\First\\Project\\CIMFORCE\\testFile\\temp\\" + "temp.zip");
+        ZipOutputStream zipOutputStream = null;
+        InputStream inputStream = null;
+        zipOutputStream = new ZipOutputStream(new FileOutputStream(zipFile));
+
 
         for (File file : files)
         {
             //new zip entry and copying inputstream with file to zipOutputStream, after all closing streams
             zipOutputStream.putNextEntry(new ZipEntry(file.getName()));
-            FileInputStream fileInputStream = new FileInputStream(file);
+            inputStream = new FileInputStream(file);
 
-            IOUtils.copyLarge(fileInputStream, zipOutputStream);
+            while(inputStream.read(fileBuffer) != -1)
+            {
+                zipOutputStream.write(fileBuffer);
+            }
+//            IOUtils.copyLarge(fileInputStream, zipOutputStream);
+            inputStream.close();
 
-            fileInputStream.close();
-            zipOutputStream.closeEntry();
         }
 
-        if (zipOutputStream != null)
-        {
-            zipOutputStream.finish();
-            zipOutputStream.flush();
-            zipOutputStream.close();
-        }
-        bufferedOutputStream.close();
-        byteArrayOutputStream.close();
-
-        return byteArrayOutputStream.toByteArray();
+        zipOutputStream.close();
     }
 
 }
