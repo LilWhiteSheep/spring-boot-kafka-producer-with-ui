@@ -157,6 +157,7 @@ public class FileUploadController
             Thread.sleep(5000);
 //            File tempFile = File.createTempFile(prefix, suffix);
             File tempFile = new File(filePath);
+            tempFile.mkdirs();
             file.transferTo(tempFile);
 
             //Throw all files to zip and return byte[]
