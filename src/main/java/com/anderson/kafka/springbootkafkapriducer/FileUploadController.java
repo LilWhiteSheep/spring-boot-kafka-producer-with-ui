@@ -53,7 +53,10 @@ public class FileUploadController
     @Autowired
     private KafkaTemplate<Integer, byte[]> kafkaTemplate;
 
-    private static final String TOPIC = "Kafka_Example_file";
+    private static final String TOPIC_A = "Kafka_Example_file_A";
+    private static final String TOPIC_B = "Kafka_Example_file_B";
+    private static final String TOPIC_C = "Kafka_Example_file_C";
+    private static final String TOPIC_TEST = "topicTest2";
     private static final String M_TOPIC = "MessageQueue";
 
     @GetMapping("/")
@@ -81,6 +84,7 @@ public class FileUploadController
     public String handleFileUpload(@RequestParam("file") MultipartFile file,
                                    RedirectAttributes redirectAttributes)
     {
+
         while(uploadingFlag)
         {
             System.out.println(uploadingFlag);
@@ -102,7 +106,7 @@ public class FileUploadController
         int blockCount;
         byte[] byteChunk = null;
 
-        byte[] fileBuffer = new byte[2048];
+        byte[] fileBuffer = new byte[4096];// in byte
 
         try
         {
@@ -172,9 +176,15 @@ public class FileUploadController
             //send file name
             String finalFileName = prefix + ".zip";
             byte[] fileNameInBytes = finalFileName.getBytes();
-            kafkaTemplate.send(new ProducerRecord<>(TOPIC, messageNo, fileNameBytes));
+//            kafkaTemplate.send(new ProducerRecord<>(TOPIC_C, messageNo, fileNameBytes));
+//            kafkaTemplate.send(new ProducerRecord<>(TOPIC_B, messageNo, fileNameBytes));
+            kafkaTemplate.send(new ProducerRecord<>(TOPIC_TEST, messageNo, fileNameBytes));
+            System.out.println("fileNameByte : " + messageNo + ", value : " + Arrays.toString(fileNameBytes));
             messageNo++;
-            kafkaTemplate.send(new ProducerRecord<>(TOPIC, messageNo, fileNameInBytes));
+//            kafkaTemplate.send(new ProducerRecord<>(TOPIC_C, messageNo, fileNameInBytes));
+//            kafkaTemplate.send(new ProducerRecord<>(TOPIC_B, messageNo, fileNameInBytes));
+            kafkaTemplate.send(new ProducerRecord<>(TOPIC_TEST, messageNo, fileNameInBytes));
+            System.out.println("fileNameInByte : " + messageNo + ", value : " + Arrays.toString(fileNameInBytes));
             messageNo++;
 //            InputStream inputStream = file.getInputStream();
             ZipFilesToByte(files);
@@ -185,7 +195,9 @@ public class FileUploadController
             // inputstream?
             while (inputStream.read(fileBuffer) != -1)
             {
-                kafkaTemplate.send(new ProducerRecord<>(TOPIC, messageNo, fileBuffer));
+//                kafkaTemplate.send(new ProducerRecord<>(TOPIC_C, messageNo, fileBuffer));
+//                kafkaTemplate.send(new ProducerRecord<>(TOPIC_B, messageNo, fileBuffer));
+                kafkaTemplate.send(new ProducerRecord<>(TOPIC_TEST, messageNo, fileBuffer));
 //                System.out.println("Message: key " + ", value " + Arrays.toString(fileBuffer));
                 messageNo++;
             }
@@ -212,7 +224,9 @@ public class FileUploadController
         }
         finally
         {
-            kafkaTemplate.send(new ProducerRecord<>(TOPIC, messageNo, finalBytes));
+//            kafkaTemplate.send(new ProducerRecord<>(TOPIC_C, messageNo, finalBytes));
+//            kafkaTemplate.send(new ProducerRecord<>(TOPIC_B, messageNo, finalBytes));
+            kafkaTemplate.send(new ProducerRecord<>(TOPIC_TEST, messageNo, finalBytes));
             uploadingFlag = false;
         }
 

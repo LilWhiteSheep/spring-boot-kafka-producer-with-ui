@@ -51,8 +51,9 @@ public class UserResource
 //    private static final String TOPIC = "Kafka_Example";
 //    private static final String TOPIC = "Kafka_Example_json";
 
-    private static final String TOPIC = "Kafka_Example_file";
+    private static final String TOPIC = "Kafka_Example_file";//for File
     private static final String M_TOPIC = "MessageQueue";
+    //private static final String TEST_TOPIC = "topicTest";
 
     //    @GetMapping("/publish/{message}")
 //    public String post(@PathVariable("message") final String message)
