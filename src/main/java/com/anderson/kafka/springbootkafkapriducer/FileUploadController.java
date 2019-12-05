@@ -56,7 +56,7 @@ public class FileUploadController
     private static final String TOPIC_A = "Kafka_Example_file_A";
     private static final String TOPIC_B = "Kafka_Example_file_B";
     private static final String TOPIC_C = "Kafka_Example_file_C";
-    private static final String TOPIC_TEST = "topicTest2";
+    private static final String TOPIC_TEST = "fileTest";
     private static final String M_TOPIC = "MessageQueue";
 
     @GetMapping("/")
@@ -106,7 +106,7 @@ public class FileUploadController
         int blockCount;
         byte[] byteChunk = null;
 
-        byte[] fileBuffer = new byte[4096];// in byte
+        byte[] fileBuffer = new byte[102400];// in byte
 
         try
         {
