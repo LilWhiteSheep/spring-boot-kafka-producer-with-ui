@@ -33,19 +33,8 @@ import java.util.zip.ZipOutputStream;
 @Controller
 public class FileUploadController
 {
-
-//    private final StorageService storageService;
-
-//    @Autowired
-//    public FileUploadController(StorageService storageService) {
-//        this.storageService = storageService;
-//    }
-
-//    @Autowired
-//    private MqttfilesRepository mqttfilesRepository;
-
     private final byte[] fileNameBytes = {0x00, 0x09};
-    private final byte[] fileContentBytes = {0x00, 0x10};
+    //private final byte[] fileContentBytes = {0x00, 0x10};
     private final byte[] finalBytes = {0x00, 0x11};
 
     static boolean uploadingFlag = false;
@@ -53,32 +42,13 @@ public class FileUploadController
     @Autowired
     private KafkaTemplate<Integer, byte[]> kafkaTemplate;
 
-    private static final String TOPIC_A = "Kafka_Example_file_A";
-    private static final String TOPIC_B = "Kafka_Example_file_B";
-    private static final String TOPIC_C = "Kafka_Example_file_C";
     private static final String TOPIC_TEST = "fileTest";
-    private static final String M_TOPIC = "MessageQueue";
 
     @GetMapping("/")
     public String listUploadedFiles(Model model) throws IOException
     {
-
-//        model.addAttribute("files", storageService.loadAll().map(
-//                path -> MvcUriComponentsBuilder.fromMethodName(FileUploadController.class,
-//                        "serveFile", path.getFileName().toString()).build().toString())
-//                .collect(Collectors.toList()));
-
         return "uploadForm";
     }
-
-//    @GetMapping("/files/{filename:.+}")
-//    @ResponseBody
-//    public ResponseEntity<Resource> serveFile(@PathVariable String filename) {
-//
-//        Resource file = storageService.loadAsResource(filename);
-//        return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,
-//                "attachment; filename=\"" + file.getFilename() + "\"").body(file);
-//    }
 
     @PostMapping("/")
     public String handleFileUpload(@RequestParam("file") MultipartFile file,
@@ -101,30 +71,11 @@ public class FileUploadController
         //TestFileTransfer
         int messageNo = 1;
 
-        //for splitting
-        int blockSize = 2048;// in byte
-        int blockCount;
-        byte[] byteChunk = null;
-
+        //for splitting the file
         byte[] fileBuffer = new byte[102400];// in byte
 
         try
         {
-
-//            byte[] fileInByte = file.getBytes();
-//            blockCount = (fileInByte.length / blockSize) + 1;
-//
-//            for (int i = 0; i < blockCount - 1; i++) {
-//                int pointer = i * blockSize;
-//                byteChunk = Arrays.copyOfRange(fileInByte, pointer, pointer + blockSize);
-//                kafkaTemplate.send(new ProducerRecord<>(TOPIC, messageNo, byteChunk));
-//                messageNo++;
-//            }
-//            byteChunk = Arrays.copyOfRange(fileInByte, blockSize * (blockCount - 1), fileInByte.length);
-//            kafkaTemplate.send(new ProducerRecord<>(TOPIC, messageNo, byteChunk));
-//
-//            messageNo++;
-//            kafkaTemplate.send(new ProducerRecord<>(TOPIC, messageNo, finalBytes));
             //Avro Start Here
             File avsc = new File("message.avsc");
             try
@@ -159,7 +110,6 @@ public class FileUploadController
             System.out.println(prefix);
             System.out.println(suffix);
             Thread.sleep(5000);
-//            File tempFile = File.createTempFile(prefix, suffix);
             File tempFile = new File(filePath);
             tempFile.mkdirs();
             file.transferTo(tempFile);
@@ -176,33 +126,26 @@ public class FileUploadController
             //send file name
             String finalFileName = prefix + ".zip";
             byte[] fileNameInBytes = finalFileName.getBytes();
-//            kafkaTemplate.send(new ProducerRecord<>(TOPIC_C, messageNo, fileNameBytes));
-//            kafkaTemplate.send(new ProducerRecord<>(TOPIC_B, messageNo, fileNameBytes));
+            //send fineNameByte to let consumer know producer is sending file name
             kafkaTemplate.send(new ProducerRecord<>(TOPIC_TEST, messageNo, fileNameBytes));
-            System.out.println("fileNameByte : " + messageNo + ", value : " + Arrays.toString(fileNameBytes));
+            //System.out.println("fileNameByte : " + messageNo + ", value : " + Arrays.toString(fileNameBytes));
             messageNo++;
-//            kafkaTemplate.send(new ProducerRecord<>(TOPIC_C, messageNo, fileNameInBytes));
-//            kafkaTemplate.send(new ProducerRecord<>(TOPIC_B, messageNo, fileNameInBytes));
             kafkaTemplate.send(new ProducerRecord<>(TOPIC_TEST, messageNo, fileNameInBytes));
-            System.out.println("fileNameInByte : " + messageNo + ", value : " + Arrays.toString(fileNameInBytes));
+            //System.out.println("fileNameInByte : " + messageNo + ", value : " + Arrays.toString(fileNameInBytes));
             messageNo++;
-//            InputStream inputStream = file.getInputStream();
             ZipFilesToByte(files);
             File zipFile;
             zipFile = new File("D:\\NtustMaster\\First\\Project\\CIMFORCE\\testFile\\temp\\" + "temp.zip");
-//            InputStream inputStream = new ByteArrayInputStream(ZipFilesToByte(files));//how to transfer bytearray to
             InputStream inputStream = new FileInputStream(zipFile);
-            // inputstream?
+
+            //send file
             while (inputStream.read(fileBuffer) != -1)
             {
-//                kafkaTemplate.send(new ProducerRecord<>(TOPIC_C, messageNo, fileBuffer));
-//                kafkaTemplate.send(new ProducerRecord<>(TOPIC_B, messageNo, fileBuffer));
                 kafkaTemplate.send(new ProducerRecord<>(TOPIC_TEST, messageNo, fileBuffer));
-//                System.out.println("Message: key " + ", value " + Arrays.toString(fileBuffer));
                 messageNo++;
             }
 
-            //after file transfer, delete tempFile
+            //after file transfer is done, delete tempFile
             if (tempFile.exists())
             {
                 tempFile.delete();
@@ -224,58 +167,16 @@ public class FileUploadController
         }
         finally
         {
-//            kafkaTemplate.send(new ProducerRecord<>(TOPIC_C, messageNo, finalBytes));
-//            kafkaTemplate.send(new ProducerRecord<>(TOPIC_B, messageNo, finalBytes));
+            //let consumer producer is done file transfer
             kafkaTemplate.send(new ProducerRecord<>(TOPIC_TEST, messageNo, finalBytes));
             uploadingFlag = false;
         }
-
-
-//        storageService.store(file);
-//
-//        Mqttfiles mq = new Mqttfiles();
-//
-//        Timestamp timestamp = new Timestamp(System.currentTimeMillis());
-//        mq.setCreateAt(timestamp);
-//
-//        mq.setCreator(5);
-//        mq.setFilepath( file.getOriginalFilename() );
-//        mq.setState(0);
-//
-//        redirectAttributes.addFlashAttribute("message",
-//                "You successfully uploaded " + file.getOriginalFilename() + "!");
 
         return "redirect:/";
     }
 
     private void ZipFilesToByte(ArrayList<File> files) throws IOException
     {
-//        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-//        BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(byteArrayOutputStream);
-//        ZipOutputStream zipOutputStream = new ZipOutputStream(bufferedOutputStream);
-//
-//        for (File file : files)
-//        {
-//            //new zip entry and copying inputstream with file to zipOutputStream, after all closing streams
-//            zipOutputStream.putNextEntry(new ZipEntry(file.getName()));
-//            FileInputStream fileInputStream = new FileInputStream(file);
-//
-//            IOUtils.copyLarge(fileInputStream, zipOutputStream);
-//
-//            fileInputStream.close();
-//            zipOutputStream.closeEntry();
-//        }
-//
-//        if (zipOutputStream != null)
-//        {
-//            zipOutputStream.finish();
-//            zipOutputStream.flush();
-//            zipOutputStream.close();
-//        }
-//        bufferedOutputStream.close();
-//        byteArrayOutputStream.close();
-//
-//        return byteArrayOutputStream.toByteArray();
         byte[] fileBuffer = new byte[2048];
         File zipFile = new File("D:\\NtustMaster\\First\\Project\\CIMFORCE\\testFile\\temp\\" + "temp.zip");
         ZipOutputStream zipOutputStream = null;
